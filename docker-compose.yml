@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: vireon_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vireon_db
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    container_name: vireon_redis
+    ports:
+      - "6380:6379"

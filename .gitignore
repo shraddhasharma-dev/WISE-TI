@@ -1,0 +1,20 @@
+# Node
+node_modules/
+.next/
+
+# Python
+venv/
+__pycache__/
+
+# Environment variables
+.env
+
+# Prisma
+frontend/generated/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
