@@ -1,19 +1,19 @@
-version: '3.9'
+version: "3.9"
 
 services:
   postgres:
-    image: postgres:15
-    container_name: vireon_postgres
+    image: postgres
+    container_name: hackathon_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: vireon_db
+      POSTGRES_DB: hackathon_db
     ports:
       - "5432:5432"
 
   redis:
-    image: redis:7
-    container_name: vireon_redis
+    image: redis
+    container_name: hackathon_redis
     ports:
-      - "6380:6379"
+      - "6379:6379"
