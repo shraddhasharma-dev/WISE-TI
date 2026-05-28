@@ -1,20 +1,18 @@
 import { useState } from "react";
-
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
-function AdminLayout({ children }) {
+function AdminLayout({ children, activeTab, setActiveTab }) {
   const [darkMode, setDarkMode] = useState(false);
 
   return (
     <div className={darkMode ? "dark" : ""}>
-
       <div className="bg-[#F5F3F0] dark:bg-[#0f172a] min-h-screen transition-all duration-300">
-
-        <Sidebar />
+        
+        {/* Forwarding navigation state down to the sidebar */}
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="ml-[280px]">
-
           <Topbar
             darkMode={darkMode}
             setDarkMode={setDarkMode}
@@ -23,11 +21,9 @@ function AdminLayout({ children }) {
           <main className="p-8 lg:p-10">
             {children}
           </main>
-
         </div>
 
       </div>
-
     </div>
   );
 }

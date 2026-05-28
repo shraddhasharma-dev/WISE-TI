@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 
 import WorkflowTracker from "../components/dashboard/WorkflowTracker";
@@ -7,38 +8,52 @@ import LeaderboardTable from "../components/dashboard/LeaderboardTable";
 import AlertCard from "../components/dashboard/AlertCard";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
 
+// Explicit extensions ensure Vite hot-reloads seamlessly without pre-transform hang-ups
+import ParticipantsTab from "../components/dashboard/ParticipantsTab.jsx";
+import TeamsTab from "../components/dashboard/TeamsTab.jsx";
+import JudgesTab from "../components/dashboard/JudgesTab.jsx";
+import EvaluationsTab from "../components/dashboard/EvaluationsTab.jsx";
 function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("Dashboard");
+
   return (
-    <AdminLayout>
+    <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      {/* 1. MAIN DASHBOARD CONTENT VIEW */}
+      {activeTab === "Dashboard" && (
+        <div className="space-y-8">
+          <WorkflowTracker />
+          <StatsGrid />
 
-      <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-[24px]">
+            <div className="lg:col-span-8 space-y-6">
+              <QuickActions />
+              <LeaderboardTable />
+            </div>
 
-        <WorkflowTracker />
-
-        <StatsGrid />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-[24px]">
-
-          <div className="lg:col-span-8 space-y-6">
-
-            <QuickActions />
-
-            <LeaderboardTable />
-
+            <div className="lg:col-span-4 space-y-6">
+              <AlertCard />
+              <ActivityFeed />
+            </div>
           </div>
-
-          <div className="lg:col-span-4 space-y-6">
-
-            <AlertCard />
-
-            <ActivityFeed />
-
-          </div>
-
         </div>
+      )}
 
-      </div>
+      {/* 2. PARTICIPANTS LIST VIEW */}
+      {activeTab === "Participants" && (
+        <ParticipantsTab />
+      )}
 
+      {/* 3. TEAMS MANAGEMENT INSTANCE VIEW */}
+      {activeTab === "Teams" && (
+        <TeamsTab />
+      )}
+      {activeTab === "Judges" && (
+  <JudgesTab />
+)}
+    {activeTab === "Evaluations" && (
+     <EvaluationsTab />
+   )}
+      
     </AdminLayout>
   );
 }
