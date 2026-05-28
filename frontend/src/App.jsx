@@ -1,49 +1,31 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-
-import AdminDashboard from "./pages/AdminDashboard";
-import ParticipantDashboard from "./pages/ParticipantDashboard";
-import JudgeDashboard from "./pages/JudgeDashboard";
+import React, { useState } from 'react';
+import LandingPage from './pages/LandingPage';
+import AdminDashboard from './pages/AdminDashboard';
+import JudgeDashboard from './pages/JudgeDashboard';
+import ParticipantDashboard from './pages/ParticipantDashboard';
 
 function App() {
+  // Use status state for role-based view switching
+  const [currentView, setCurrentView] = useState('landing');
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'admin':
+        return <AdminDashboard onBack={() => setCurrentView('landing')} />;
+      case 'judge':
+        return <JudgeDashboard onBack={() => setCurrentView('landing')} />;
+      case 'participant':
+        return <ParticipantDashboard onBack={() => setCurrentView('landing')} />;
+      case 'landing':
+      default:
+        return <LandingPage onNavigate={(role) => setCurrentView(role)} />;
+    }
+  };
+
   return (
-    <BrowserRouter>
-
-      <Routes>
-
-        {/* ADMIN */}
-        <Route
-          path="/admin/dashboard"
-          element={<AdminDashboard />}
-        />
-
-        {/* PARTICIPANT */}
-        <Route
-          path="/participant/dashboard"
-          element={<ParticipantDashboard />}
-        />
-
-        {/* JUDGE */}
-        <Route
-          path="/judge/dashboard"
-          element={<JudgeDashboard />}
-        />
-
-        {/* DEFAULT ROUTE */}
-        <Route
-          path="*"
-          element={
-            <Navigate to="/participant/dashboard" />
-          }
-        />
-
-      </Routes>
-
-    </BrowserRouter>
+    <>
+      {renderView()}
+    </>
   );
 }
 
