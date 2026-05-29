@@ -1,13 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import JudgeSidebar from '../components/judge/JudgeSidebar';
 import EvaluationHero from '../components/judge/EvaluationHero';
 import EvaluationQueue from '../components/judge/EvaluationQueue';
 import JudgeResources from '../components/judge/JudgeResources';
 import ActivityAndMentors from '../components/judge/ActivityAndMentors';
 
+import { teamsApi, scoresApi } from '../api';
+
 export default function JudgeDashboard() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [countdown, setCountdown] = useState({ hours: 2, minutes: 48, seconds: 12 });
+
+  const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teamScores, setTeamScores] = useState({});
+  const [progress, setProgress] = useState({
+    evaluated: 0,
+    total: 0,
+    percent: 0,
+    nextTeam: null
+  });
 
   const sectionRefs = {
     dashboard: useRef(null),
@@ -16,7 +29,7 @@ export default function JudgeDashboard() {
     activity: useRef(null),
   };
 
-  // Shared Countdown Engine
+  // countdown
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -24,93 +37,111 @@ export default function JudgeDashboard() {
         seconds--;
         if (seconds < 0) { seconds = 59; minutes--; }
         if (minutes < 0) { minutes = 59; hours--; }
-        if (hours < 0) {
-          clearInterval(timer);
-          return { hours: 0, minutes: 0, seconds: 0 };
-        }
+        if (hours < 0) return { hours: 0, minutes: 0, seconds: 0 };
         return { hours, minutes, seconds };
       });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Intersection Observer Scroll Spy
+  // load teams
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '-20% 0px -60% 0px',
-      threshold: 0,
+    const load = async () => {
+      const res = await teamsApi.getAll();
+      setTeams(res.teams || res || []);
     };
-
-    const handleIntersection = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(handleIntersection, observerOptions);
-    Object.values(sectionRefs).forEach((ref) => {
-      if (ref.current) observer.observe(ref.current);
-    });
-
-    return () => {
-      Object.values(sectionRefs).forEach((ref) => {
-        if (ref.current) observer.unobserve(ref.current);
-      });
-    };
+    load();
   }, []);
 
-  const handleNavClick = (e, id) => {
-    e.preventDefault();
-    const targetElement = sectionRefs[id].current;
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth' });
+  // compute scores + progress whenever teams change
+  useEffect(() => {
+    if (!teams.length) return;
+    computeScores(teams);
+  }, [teams]);
+
+  // shared helper — fetches all scores and recomputes progress
+  const computeScores = async (teamList) => {
+    let evaluated = 0;
+    const scoreMap = {};
+
+    for (const t of teamList) {
+      const res = await scoresApi.getByTeam(t.id);
+      const scores = res?.scores || [];
+      scoreMap[t.id] = scores;
+      if (scores.length > 0) evaluated++;
     }
+
+    const total = teamList.length;
+    const percent = total ? Math.round((evaluated / total) * 100) : 0;
+    const nextTeam = teamList.find(t => !scoreMap[t.id]?.length);
+
+    setTeamScores(scoreMap);
+    setProgress({ evaluated, total, percent, nextTeam: nextTeam?.name || null });
+  };
+
+  // select team
+  const openTeamScoring = (team) => {
+    setSelectedTeam(team);
+  };
+
+  // submit score — refreshes the scored team AND recomputes progress
+  const submitScore = async (judgeName, score) => {
+    if (!selectedTeam) return;
+
+    await scoresApi.submit({
+      team_id: selectedTeam.id,
+      judge_name: judgeName,
+      score: Number(score),
+    });
+
+    // refresh this team's scores from backend
+    const updated = await scoresApi.getByTeam(selectedTeam.id);
+    const updatedScores = updated?.scores || [];
+
+    setTeamScores((prev) => {
+      const newMap = { ...prev, [selectedTeam.id]: updatedScores };
+
+      // recompute progress from the new scoreMap synchronously
+      const evaluated = teams.filter(t => (newMap[t.id]?.length || 0) > 0).length;
+      const total = teams.length;
+      const percent = total ? Math.round((evaluated / total) * 100) : 0;
+      const nextTeam = teams.find(t => !(newMap[t.id]?.length));
+
+      setProgress({ evaluated, total, percent, nextTeam: nextTeam?.name || null });
+
+      return newMap;
+    });
   };
 
   return (
     <div className="bg-[#F5F3F0] min-h-screen text-[#031f22] font-sans antialiased">
-      {/* Sidebar Navigation */}
-      <JudgeSidebar activeSection={activeSection} onNavClick={handleNavClick} />
 
-      {/* Main Workspace */}
+      <JudgeSidebar />
+
       <main className="ml-64 min-h-screen px-16 py-12 flex flex-col gap-20">
-        <section ref={sectionRefs.dashboard} id="dashboard" className="scroll-mt-8">
-          <EvaluationHero countdown={countdown} />
+
+        <section ref={sectionRefs.dashboard} id="dashboard">
+          <EvaluationHero countdown={countdown} progress={progress} />
         </section>
 
-        <section ref={sectionRefs.evaluation} id="evaluation" className="scroll-mt-8">
-          <EvaluationQueue />
+        <section ref={sectionRefs.evaluation} id="evaluation">
+          <EvaluationQueue
+            teams={teams}
+            selectedTeam={selectedTeam}
+            teamScores={teamScores}
+            onSelectTeam={openTeamScoring}
+            onSubmitScore={submitScore}
+          />
         </section>
 
-        <section ref={sectionRefs.resources} id="resources" className="scroll-mt-8">
+        <section ref={sectionRefs.resources} id="resources">
           <JudgeResources />
         </section>
 
-        <section ref={sectionRefs.activity} id="activity" className="scroll-mt-8">
+        <section ref={sectionRefs.activity} id="activity">
           <ActivityAndMentors />
         </section>
 
-        {/* System Status Bar */}
-        <footer className="mt-auto py-12 border-t border-[#d6f3f7] flex justify-between items-center text-[#414844] text-sm font-medium">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span>System Online</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">history</span>
-              <span>Last synced: Just now</span>
-            </div>
-          </div>
-          <div className="flex gap-8">
-            <a className="hover:text-[#012d1d] transition-colors" href="#">Privacy Policy</a>
-            <a className="hover:text-[#012d1d] transition-colors" href="#">Judge Agreement</a>
-            <span>Wise@TI v2.4.0</span>
-          </div>
-        </footer>
       </main>
     </div>
   );

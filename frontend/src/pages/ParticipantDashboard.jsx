@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import EventJourney from '../components/participant/EventJourney';
+import {
+  participantsApi,
+  teamsApi,
+  aiApi
+} from '../api';
 import ParticipantSidebar from '../components/participant/ParticipantSidebar';
 import ParticipantHeader from '../components/participant/ParticipantHeader';
 import WelcomeHero from '../components/participant/WelcomeHero';
@@ -8,7 +14,11 @@ import TeamAndResources from '../components/participant/TeamAndResources';
 export default function ParticipantDashboard() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [countdown, setCountdown] = useState({ hours: 28, minutes: 44, seconds: 12 });
-
+  const [participant, setParticipant] = useState(null);
+const [timeline, setTimeline] = useState([]);
+const [team, setTeam] = useState(null);
+const [notifications, setNotifications] = useState([]);
+const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef(null);
   const sectionRefs = {
     dashboard: useRef(null),
@@ -33,6 +43,65 @@ export default function ParticipantDashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+  async function loadDashboard() {
+    try {
+      const participantsResponse = await participantsApi.getAll();
+
+const allParticipants =
+  participantsResponse.participants || [];
+
+// pick first available participant automatically
+const firstParticipant = allParticipants[0];
+
+if (!firstParticipant) {
+  throw new Error("No participants found");
+}
+
+const response = await participantsApi.getById(
+  firstParticipant.id
+);
+
+      setParticipant(response.participant);
+setTimeline(response.timeline);
+setNotifications(response.notifications || []);
+
+const teamsResponse = await teamsApi.getAll();
+const teams = teamsResponse.teams || [];
+
+const matchedTeam = teams
+  .filter((team) =>
+    team.members?.some(
+      (member) =>
+        member &&
+        member.id &&
+        response?.participant?.id &&
+        member.id === response.participant.id
+    )
+  )
+  .sort((a, b) => b.id - a.id)[0];
+
+if (matchedTeam) {
+  const compatibility =
+    await aiApi.compatibilitySummary({
+      team_name: matchedTeam.name,
+      members: matchedTeam.members,
+    });
+
+  matchedTeam.compatibility =
+    compatibility.summary;
+}
+
+setTeam(matchedTeam || null);
+    } catch (error) {
+      console.error('Dashboard load failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadDashboard();
+}, []);
 
   // Fixed Scroll Spy for Custom Element Containers
   const handleScroll = () => {
@@ -65,7 +134,13 @@ export default function ParticipantDashboard() {
       });
     }
   };
-
+if (loading) {
+  return (
+    <div className="h-screen flex items-center justify-center">
+      Loading...
+    </div>
+  );
+}
   return (
     <div className="bg-[#eafdff] h-screen overflow-hidden flex font-sans antialiased text-[#031f22]">
       {/* Side Navigation Panel */}
@@ -81,15 +156,25 @@ export default function ParticipantDashboard() {
 
         <div className="px-16 py-2 space-y-12 pb-24">
           <div ref={sectionRefs.dashboard} id="dashboard" className="pt-4">
-            <WelcomeHero />
+            <WelcomeHero
+  participant={participant}
+  notifications={notifications}
+/>
           </div>
 
-          <div ref={sectionRefs.timeline} id="timeline" className="scroll-mt-6">
-            <TimelineTracker countdown={countdown} />
-          </div>
+          <div ref={sectionRefs.timeline} id="timeline" className="scroll-mt-6 space-y-10">
+  
+  <TimelineTracker
+    countdown={countdown}
+    timeline={timeline}
+  />
+
+  <EventJourney participant={participant} />
+
+</div>
 
           <div ref={sectionRefs.teams} id="teams" className="scroll-mt-6">
-            <TeamAndResources />
+            <TeamAndResources team={team} />
           </div>
         </div>
       </main>

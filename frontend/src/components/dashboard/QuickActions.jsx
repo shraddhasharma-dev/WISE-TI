@@ -1,4 +1,25 @@
+import { aiApi } from "../../api";
+import { useState } from "react";
 function QuickActions() {
+  const [email, setEmail] = useState("");
+const [loading, setLoading] = useState(false);
+async function generateEmail() {
+  setLoading(true);
+
+  try {
+    const res = await aiApi.draftEmail({
+      stage: "Final Round",
+      team_name: "Quantum Coders",
+      participant_name: "Hargun",
+    });
+
+    setEmail(res.email);
+  } catch (err) {
+    console.error(err);
+  }
+
+  setLoading(false);
+}
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
 
@@ -40,9 +61,12 @@ function QuickActions() {
 
           </h4>
 
-          <button className="text-[10px] font-bold text-[#1B4332] hover:underline">
-            RUN AUTO-DRAFT
-          </button>
+          <button
+  onClick={generateEmail}
+  className="text-[10px] font-bold text-[#1B4332] hover:underline"
+>
+  {loading ? "GENERATING..." : "RUN AUTO-DRAFT"}
+</button>
 
         </div>
 
@@ -87,6 +111,17 @@ function QuickActions() {
             </span>
 
           </div>
+          {email && (
+  <div className="bg-[#F5F3F0] rounded-lg p-4 border border-gray-200 mt-4">
+    <p className="text-[10px] uppercase text-gray-500 mb-2 font-bold">
+      AI Generated Email
+    </p>
+
+    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+      {email}
+    </p>
+  </div>
+)}
 
         </div>
 
