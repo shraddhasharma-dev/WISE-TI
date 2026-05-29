@@ -1,6 +1,12 @@
-// src/config/redis.js
-import Ioredis from 'ioredis';
+import { createClient } from 'redis';
 
-export const redisConnection = new Ioredis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: null,
+const redisClient = createClient({
+    // This dynamically forces it to look at your .env values
+    url: `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || 6379}`
 });
+
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
+
+await redisClient.connect();
+
+export default redisClient;

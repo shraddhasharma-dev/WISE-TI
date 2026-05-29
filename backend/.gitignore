@@ -1,0 +1,7 @@
+# Ignore Prisma runtime generation engines
+node_modules/.prisma/
+
+# Ignore user-uploaded roster assets and testing files
+src/uploads/
+uploads/
+*.csv
